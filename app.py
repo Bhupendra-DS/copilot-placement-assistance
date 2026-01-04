@@ -9,48 +9,36 @@ from rules.scoring_rules import SKILL_WEIGHTS
 from rules.role_requirements import ROLE_REQUIREMENTS
 
 app = Flask(__name__)
-# Enable CORS globally for API access
+# Enable CORS globally for API access (required for frontend integration)
 CORS(app)
 
-# NOTE: This Flask application has been converted to a pure API-only backend.
-# The templates/ and static/ directories are deprecated and no longer used.
-# All routes now return JSON responses only.
+# NOTE: This is a pure API-only backend. All routes return JSON responses only.
+# The app is WSGI-compatible and works with Vercel's @vercel/python runtime.
+
 
 @app.route("/", methods=["GET"])
-def index():
+def health_check():
     """
-    Root endpoint - API-only backend.
-    UI rendering has been removed. Use /api/evaluate for evaluation.
+    Health check endpoint - Returns API status and available endpoints.
+    This is the only non-/api route and serves as the API health/status endpoint.
+    Returns JSON for consistency (API-only backend, no HTML rendering).
     """
     return jsonify({
-        "status": "Backend running",
-        "message": "This is a pure API backend. Use /api/evaluate for candidate evaluation.",
+        "status": "healthy",
+        "service": "Placement Assistance Copilot API",
+        "version": "1.0.0",
         "endpoints": {
             "evaluate": "/api/evaluate",
             "requirements": "/api/requirements",
             "skill_weights": "/api/skill-weights"
         }
-    })
+    }), 200
 
-
-# -------------------- ROLE REQUIREMENTS ENDPOINT --------------------
-@app.route("/requirements", methods=["GET"])
-def requirements():
-    """
-    Role requirements endpoint - API-only backend.
-    UI rendering has been removed. Use /api/requirements for JSON data.
-    """
-    return jsonify({
-        "status": "Backend running",
-        "message": "Use /api/requirements to get role requirements data."
-    })
-
-
-# ==================== API ENDPOINTS FOR LOVABLE UI ====================
 
 def transform_response_for_ui(readiness, scores, weights, recommended, rejected, strengths, gaps, plan, actions):
     """
     Transform Flask API response to match UI's expected format.
+    This function maintains backward compatibility with existing frontend.
     """
     # Transform readiness
     readiness_ui = {
@@ -320,9 +308,20 @@ def api_evaluate():
     API endpoint for candidate evaluation.
     Accepts JSON with skill scores and feedback.
     Returns complete evaluation results in UI-compatible format.
+    
+    Request body should contain:
+    - excel, sql, python, stats, ml, bi (0-100 scores)
+    - feedback (string)
     """
     try:
         data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Request body must be JSON",
+                "message": "Please send a JSON payload with candidate data"
+            }), 400
         
         # Extract scores from JSON
         scores = {
@@ -336,88 +335,107 @@ def api_evaluate():
         
         feedback_text = data.get("feedback", "")
         
-        # -------------------- AGENT WORKFLOWS (SAME LOGIC) --------------------
+        # Run agent workflows (business logic unchanged)
         readiness = evaluate_readiness(scores, feedback_text)
         recommended, rejected = recommend_roles(scores)
         strengths, gaps, plan = analyze_feedback(feedback_text)
         actions = generate_next_actions(readiness, recommended)
         
-        # -------------------- TRANSFORM FOR UI --------------------
+        # Transform for UI
         ui_response = transform_response_for_ui(
             readiness, scores, SKILL_WEIGHTS, recommended, rejected,
             strengths, gaps, plan, actions
         )
         
-        # -------------------- RETURN JSON RESPONSE --------------------
-        return jsonify(ui_response)
+        # Return JSON response
+        return jsonify(ui_response), 200
     
+    except ValueError as e:
+        return jsonify({
+            "success": False,
+            "error": "Invalid input",
+            "message": str(e)
+        }), 400
     except Exception as e:
         return jsonify({
             "success": False,
-            "error": str(e)
-        }), 400
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500
 
 
 @app.route("/api/requirements", methods=["GET"])
 def api_requirements():
     """
     API endpoint to get role requirements.
-    Returns all role requirements in UI-compatible format.
+    Returns all role requirements with minimum skill thresholds.
     """
-    # Transform to UI format
-    role_descriptions = {
-        "Data Analyst": "Analyze data to provide actionable business insights",
-        "Business Analyst": "Create dashboards and reports for business decision-making",
-        "Data Scientist": "Build predictive models and derive insights from complex data",
-        "Junior ML Engineer": "Deploy and maintain machine learning models in production",
-        "BI Analyst": "Design and implement business intelligence solutions"
-    }
-    
-    requirements_ui = [
-        {
-            "role": role,
-            "description": role_descriptions.get(role, f"Requirements for {role}"),
-            "requirements": [
-                {
-                    "skill": skill.replace("Statistics & Probability", "Statistics").replace("Tableau & Power BI", "BI Tools"),
-                    "minimum": minimum
-                }
-                for skill, minimum in skills.items()
-            ]
+    try:
+        # Transform to UI format
+        role_descriptions = {
+            "Data Analyst": "Analyze data to provide actionable business insights",
+            "Business Analyst": "Create dashboards and reports for business decision-making",
+            "Data Scientist": "Build predictive models and derive insights from complex data",
+            "Junior ML Engineer": "Deploy and maintain machine learning models in production",
+            "BI Analyst": "Design and implement business intelligence solutions"
         }
-        for role, skills in ROLE_REQUIREMENTS.items()
-    ]
+        
+        requirements_ui = [
+            {
+                "role": role,
+                "description": role_descriptions.get(role, f"Requirements for {role}"),
+                "requirements": [
+                    {
+                        "skill": skill.replace("Statistics & Probability", "Statistics").replace("Tableau & Power BI", "BI Tools"),
+                        "minimum": minimum
+                    }
+                    for skill, minimum in skills.items()
+                ]
+            }
+            for role, skills in ROLE_REQUIREMENTS.items()
+        ]
+        
+        return jsonify(requirements_ui), 200
     
-    return jsonify(requirements_ui)
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500
 
 
 @app.route("/api/skill-weights", methods=["GET"])
 def api_skill_weights():
     """
     API endpoint to get skill weights.
-    Returns skill weights as JSON.
+    Returns skill weights used in the evaluation algorithm.
     """
-    return jsonify({
-        "success": True,
-        "skill_weights": SKILL_WEIGHTS
-    })
+    try:
+        return jsonify({
+            "success": True,
+            "skill_weights": SKILL_WEIGHTS
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500
 
-
-# ==================== CATCH-ALL ROUTE FOR NON-API ENDPOINTS ====================
-# This route handles any non-API requests and returns JSON error responses
 
 @app.route('/<path:path>')
 def catch_all(path):
     """
-    Catch-all route for non-API endpoints.
+    Catch-all route for undefined paths.
     Returns JSON error since this is an API-only backend.
+    This route only catches paths that don't match any defined routes above.
     """
-    # Don't interfere with API routes (they should be handled by specific routes above)
-    if path.startswith('api/'):
-        return jsonify({"error": "API endpoint not found"}), 404
-    
+    # API routes are handled by specific routes above, so this only catches non-API paths
     return jsonify({
-        "error": "Route not found",
+        "success": False,
+        "error": "Not found",
         "message": "This is an API-only backend. Use /api/* endpoints.",
         "available_endpoints": [
             "/api/evaluate",
@@ -430,8 +448,8 @@ def catch_all(path):
 if __name__ == "__main__":
     print("🚀 Starting Flask API-only backend...")
     print("   All routes return JSON responses only")
-    print("   UI rendering has been disabled")
     print("\n📋 Available API endpoints:")
+    print("   GET  / - Health check")
     print("   POST /api/evaluate - Candidate evaluation")
     print("   GET  /api/requirements - Role requirements")
     print("   GET  /api/skill-weights - Skill weights")
