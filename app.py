@@ -1,6 +1,5 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-import os
 
 from agents.readiness_agent import evaluate_readiness
 from agents.role_agent import recommend_roles
@@ -10,70 +9,41 @@ from rules.scoring_rules import SKILL_WEIGHTS
 from rules.role_requirements import ROLE_REQUIREMENTS
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for Lovable UI
+# Enable CORS globally for API access
+CORS(app)
 
-# Check if Lovable UI build exists
-LOVABLE_UI_BUILD = os.path.join(os.path.dirname(__file__), 'lovable-ui', 'build')
-LOVABLE_UI_DIST = os.path.join(os.path.dirname(__file__), 'lovable-ui', 'dist')
-HAS_LOVABLE_UI = os.path.exists(LOVABLE_UI_BUILD) or os.path.exists(LOVABLE_UI_DIST)
+# NOTE: This Flask application has been converted to a pure API-only backend.
+# The templates/ and static/ directories are deprecated and no longer used.
+# All routes now return JSON responses only.
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET"])
 def index():
-    # If Lovable UI is built, serve it instead of templates
-    if HAS_LOVABLE_UI:
-        build_path = LOVABLE_UI_BUILD if os.path.exists(LOVABLE_UI_BUILD) else LOVABLE_UI_DIST
-        return send_from_directory(build_path, 'index.html')
-    
-    # Fallback to old template-based UI
-    if request.method == "POST":
-        # -------------------- INPUT SCORES --------------------
-        scores = {
-            "Excel": int(request.form["excel"]),
-            "SQL": int(request.form["sql"]),
-            "Python": int(request.form["python"]),
-            "Statistics & Probability": int(request.form["stats"]),
-            "Machine Learning": int(request.form["ml"]),
-            "Tableau & Power BI": int(request.form["bi"])
+    """
+    Root endpoint - API-only backend.
+    UI rendering has been removed. Use /api/evaluate for evaluation.
+    """
+    return jsonify({
+        "status": "Backend running",
+        "message": "This is a pure API backend. Use /api/evaluate for candidate evaluation.",
+        "endpoints": {
+            "evaluate": "/api/evaluate",
+            "requirements": "/api/requirements",
+            "skill_weights": "/api/skill-weights"
         }
-
-        feedback_text = request.form["feedback"]
-
-        # -------------------- AGENT WORKFLOWS --------------------
-        readiness = evaluate_readiness(scores, feedback_text)
-        recommended, rejected = recommend_roles(scores)
-        strengths, gaps, plan = analyze_feedback(feedback_text)
-        actions = generate_next_actions(readiness, recommended)
-
-        # -------------------- RENDER RESULT --------------------
-        return render_template(
-            "result.html",
-            readiness=readiness,
-            scores=scores,
-            weights=SKILL_WEIGHTS,
-            recommended=recommended,
-            rejected=rejected,
-            strengths=strengths,
-            gaps=gaps,
-            plan=plan,
-            actions=actions
-        )
-
-    return render_template("index.html")
+    })
 
 
-# -------------------- ROLE REQUIREMENTS PAGE --------------------
-@app.route("/requirements")
+# -------------------- ROLE REQUIREMENTS ENDPOINT --------------------
+@app.route("/requirements", methods=["GET"])
 def requirements():
-    # If Lovable UI is built, serve it (React Router will handle the route)
-    if HAS_LOVABLE_UI:
-        build_path = LOVABLE_UI_BUILD if os.path.exists(LOVABLE_UI_BUILD) else LOVABLE_UI_DIST
-        return send_from_directory(build_path, 'index.html')
-    
-    # Fallback to old template
-    return render_template(
-        "requirements.html",
-        ROLE_REQUIREMENTS=ROLE_REQUIREMENTS
-    )
+    """
+    Role requirements endpoint - API-only backend.
+    UI rendering has been removed. Use /api/requirements for JSON data.
+    """
+    return jsonify({
+        "status": "Backend running",
+        "message": "Use /api/requirements to get role requirements data."
+    })
 
 
 # ==================== API ENDPOINTS FOR LOVABLE UI ====================
@@ -433,43 +403,37 @@ def api_skill_weights():
     })
 
 
-# ==================== SERVE LOVABLE UI STATIC FILES ====================
-# This handles React Router and static assets
+# ==================== CATCH-ALL ROUTE FOR NON-API ENDPOINTS ====================
+# This route handles any non-API requests and returns JSON error responses
 
 @app.route('/<path:path>')
-def serve_lovable_ui(path):
-    """Serve Lovable UI static files and handle React Router."""
-    if HAS_LOVABLE_UI:
-        build_path = LOVABLE_UI_BUILD if os.path.exists(LOVABLE_UI_BUILD) else LOVABLE_UI_DIST
-        
-        # If it's an API route, don't serve UI
-        if path.startswith('api/'):
-            return jsonify({"error": "API endpoint not found"}), 404
-        
-        # Check if file exists
-        file_path = os.path.join(build_path, path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            return send_from_directory(build_path, path)
-        
-        # For React Router - serve index.html for all non-API routes
-        return send_from_directory(build_path, 'index.html')
+def catch_all(path):
+    """
+    Catch-all route for non-API endpoints.
+    Returns JSON error since this is an API-only backend.
+    """
+    # Don't interfere with API routes (they should be handled by specific routes above)
+    if path.startswith('api/'):
+        return jsonify({"error": "API endpoint not found"}), 404
     
-    # Fallback to old routes
-    if path == "requirements":
-        return render_template(
-            "requirements.html",
-            ROLE_REQUIREMENTS=ROLE_REQUIREMENTS
-        )
-    
-    return jsonify({"error": "Route not found"}), 404
+    return jsonify({
+        "error": "Route not found",
+        "message": "This is an API-only backend. Use /api/* endpoints.",
+        "available_endpoints": [
+            "/api/evaluate",
+            "/api/requirements",
+            "/api/skill-weights"
+        ]
+    }), 404
 
 
 if __name__ == "__main__":
-    if HAS_LOVABLE_UI:
-        print("✅ Lovable UI detected! Serving modern UI...")
-        print("   Old templates are available as fallback")
-    else:
-        print("ℹ️  Serving template-based UI (Lovable UI not found)")
-        print("   Paste your lovable-ui folder and run: python integrate_ui.py")
+    print("🚀 Starting Flask API-only backend...")
+    print("   All routes return JSON responses only")
+    print("   UI rendering has been disabled")
+    print("\n📋 Available API endpoints:")
+    print("   POST /api/evaluate - Candidate evaluation")
+    print("   GET  /api/requirements - Role requirements")
+    print("   GET  /api/skill-weights - Skill weights")
     
     app.run(debug=True)

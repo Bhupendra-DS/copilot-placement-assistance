@@ -6,12 +6,13 @@
 ![Python](https://img.shields.io/badge/python-3.8+-green.svg)
 ![React](https://img.shields.io/badge/react-18.3+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
+![API](https://img.shields.io/badge/API-RESTful-brightgreen.svg)
 
 **AI-Powered Decision Support System for Candidate Placement Evaluation**
 
-*Modern, interactive web application that evaluates candidate readiness, recommends roles, and provides personalized preparation plans*
+*Modern, RESTful API backend with interactive React frontend that evaluates candidate readiness, recommends roles, and provides personalized preparation plans*
 
-[Features](#-features) • [Demo](#-demo) • [Installation](#-installation) • [Usage](#-usage) • [API](#-api-documentation) • [Tech Stack](#-tech-stack)
+[Features](#-features) • [Demo](#-demo) • [Installation](#-installation) • [API Documentation](#-api-documentation) • [Tech Stack](#-tech-stack)
 
 </div>
 
@@ -29,6 +30,8 @@
 - 📅 **7-Day Preparation Plans** - Interactive roadmaps with detailed daily activities
 - 💼 **Professional UI** - Modern, responsive design with smooth animations
 - 🔍 **Transparent Decisions** - Fully explainable, rule-based logic (no black-box ML)
+- 🚀 **Pure REST API** - Clean API-only backend with JSON responses
+- 🌐 **CORS Enabled** - Ready for frontend integration
 
 ---
 
@@ -44,7 +47,7 @@
 - **Role Suitability Analysis**
   - Matches candidates against 5+ role types
   - Identifies recommended and not-recommended roles
-  - **NEW:** Detailed gap analysis showing exact score differences
+  - **Detailed gap analysis** showing exact score differences
 
 - **Interview Feedback Processing**
   - Extracts strengths and improvement areas
@@ -69,6 +72,13 @@
 - **Interactive Components** - Click to explore detailed information
 - **Visual Progress Bars** - See skill scores and gaps at a glance
 
+### 🔌 API Features
+
+- **Pure REST API** - All endpoints return JSON only
+- **CORS Enabled** - Cross-origin requests supported
+- **Well Documented** - Clear API endpoints with examples
+- **Error Handling** - Proper HTTP status codes and error messages
+
 ---
 
 ## 🚀 Quick Start
@@ -83,11 +93,11 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Bhupendra-DS/Placement-Assistance-Copilot.git
-   cd Placement-Assistance-Copilot
+   git clone https://github.com/Bhupendra-DS/placement-assistance-copilot.git
+   cd placement-assistance-copilot
    ```
 
-2. **Set up Backend (Flask)**
+2. **Set up Backend (Flask API)**
    ```bash
    # Install Python dependencies
    pip install -r requirements.txt
@@ -110,7 +120,7 @@
 ```bash
 python app.py
 ```
-Backend runs on: `http://127.0.0.1:5000`
+Backend API runs on: `http://127.0.0.1:5000`
 
 **Terminal 2 - Start React Frontend:**
 ```bash
@@ -118,6 +128,8 @@ cd lovable-ui
 npm run dev
 ```
 Frontend runs on: `http://localhost:3000` (or another port)
+
+The frontend will automatically connect to the backend API.
 
 #### Option 2: Production Mode
 
@@ -138,53 +150,76 @@ The system uses **4 specialized AI agents** working together:
 
 ### 1. 📊 Readiness Agent
 - Calculates weighted readiness score
-- Classifies candidate status
-- Provides reasoning and suggestions
+- Classifies candidate status (Ready/Almost Ready/Not Ready)
+- Provides reasoning and improvement suggestions
 
 ### 2. 🎯 Role Recommendation Agent
 - Matches skills against role requirements
 - Identifies blocking gaps
-- Recommends suitable roles
+- Recommends suitable roles with detailed analysis
 
 ### 3. 📝 Interview Feedback Agent
-- Analyzes feedback text
+- Analyzes feedback text using rule-based logic
 - Extracts strengths and gaps
-- Generates preparation plans
+- Generates structured preparation plans
 
 ### 4. 🚀 Action Planning Agent
 - Creates prioritized action items
-- Assigns priority levels
-- Provides detailed roadmaps
+- Assigns priority levels (High/Medium/Low)
+- Provides detailed roadmaps for improvement
 
 ---
 
 ## 📊 Skill Evaluation
 
 ### Skills Assessed
-- 📊 Excel (15% weight)
-- 🗄️ SQL (20% weight)
-- 🐍 Python (20% weight)
-- 📐 Statistics & Probability (15% weight)
-- 🤖 Machine Learning (20% weight)
-- 📈 Tableau & Power BI (10% weight)
+- 📊 **Excel** (15% weight)
+- 🗄️ **SQL** (20% weight)
+- 🐍 **Python** (20% weight)
+- 📐 **Statistics & Probability** (15% weight)
+- 🤖 **Machine Learning** (20% weight)
+- 📈 **Tableau & Power BI** (10% weight)
 
 ### Supported Roles
-- Data Analyst
-- Business Analyst
-- Data Scientist
-- Junior ML Engineer
-- BI Analyst
+- **Data Analyst** - Analyze data to provide actionable business insights
+- **Business Analyst** - Create dashboards and reports for business decision-making
+- **Data Scientist** - Build predictive models and derive insights from complex data
+- **Junior ML Engineer** - Deploy and maintain machine learning models in production
+- **BI Analyst** - Design and implement business intelligence solutions
 
 ---
 
 ## 🔌 API Documentation
 
+The backend provides a **pure REST API** that returns JSON responses only. All endpoints support CORS for frontend integration.
+
+### Base URL
+```
+http://127.0.0.1:5000
+```
+
 ### Endpoints
+
+#### `GET /`
+Root endpoint - Returns API status and available endpoints.
+
+**Response:**
+```json
+{
+  "status": "Backend running",
+  "message": "This is a pure API backend. Use /api/evaluate for candidate evaluation.",
+  "endpoints": {
+    "evaluate": "/api/evaluate",
+    "requirements": "/api/requirements",
+    "skill_weights": "/api/skill-weights"
+  }
+}
+```
 
 #### `POST /api/evaluate`
 Evaluate a candidate's placement readiness.
 
-**Request:**
+**Request Body:**
 ```json
 {
   "excel": 75,
@@ -193,26 +228,92 @@ Evaluate a candidate's placement readiness.
   "stats": 65,
   "ml": 60,
   "bi": 72,
-  "feedback": "Candidate demonstrated strong SQL skills..."
+  "feedback": "Candidate demonstrated strong SQL skills and good analytical thinking..."
 }
 ```
 
 **Response:**
 ```json
 {
-  "readiness": { ... },
-  "roleSuitability": { ... },
-  "gapAnalysis": [ ... ],
-  "preparationPlan": [ ... ],
-  "actionSummary": { ... }
+  "readiness": {
+    "status": "Almost Ready",
+    "score": 72,
+    "reasoning": [...],
+    "improvements": [...],
+    "skillBreakdown": [...]
+  },
+  "roleSuitability": {
+    "recommended": [...],
+    "notRecommended": [...]
+  },
+  "gapAnalysis": [...],
+  "feedbackAnalysis": {
+    "strengths": [...],
+    "areasToImprove": [...]
+  },
+  "preparationPlan": [...],
+  "actionSummary": {
+    "priority": "Medium",
+    "recommendation": "...",
+    "actionItems": [...]
+  },
+  "candidateScores": {...}
 }
 ```
 
 #### `GET /api/requirements`
-Get all role requirements.
+Get all role requirements with minimum skill thresholds.
+
+**Response:**
+```json
+[
+  {
+    "role": "Data Analyst",
+    "description": "Analyze data to provide actionable business insights",
+    "requirements": [
+      {
+        "skill": "SQL",
+        "minimum": 70
+      },
+      ...
+    ]
+  },
+  ...
+]
+```
 
 #### `GET /api/skill-weights`
-Get skill weight distribution.
+Get skill weight distribution used in scoring.
+
+**Response:**
+```json
+{
+  "success": true,
+  "skill_weights": {
+    "Excel": 0.15,
+    "SQL": 0.20,
+    "Python": 0.20,
+    "Statistics & Probability": 0.15,
+    "Machine Learning": 0.20,
+    "Tableau & Power BI": 0.10
+  }
+}
+```
+
+### Error Responses
+
+All endpoints return proper HTTP status codes:
+- `200 OK` - Successful request
+- `400 Bad Request` - Invalid request data
+- `404 Not Found` - Endpoint not found
+
+Error response format:
+```json
+{
+  "error": "Error message",
+  "message": "Detailed description"
+}
+```
 
 ---
 
@@ -220,79 +321,88 @@ Get skill weight distribution.
 
 ### Backend
 - **Python 3.8+**
-- **Flask** - Web framework
-- **Flask-CORS** - Cross-origin resource sharing
+- **Flask** - Lightweight web framework
+- **Flask-CORS** - Cross-origin resource sharing support
 
 ### Frontend
-- **React 18** - UI library
+- **React 18** - Modern UI library
 - **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **Framer Motion** - Animations
-- **Vite** - Build tool
-- **Radix UI** - Accessible components
-- **Lucide React** - Icons
+- **Tailwind CSS** - Utility-first styling
+- **Framer Motion** - Smooth animations
+- **Vite** - Fast build tool
+- **Radix UI** - Accessible component primitives
+- **Lucide React** - Beautiful icons
 
 ### Architecture
-- **Agentic AI** - Modular agent system
-- **RESTful API** - Backend API
-- **Component-based** - React components
+- **Agentic AI** - Modular agent system for different evaluation tasks
+- **RESTful API** - Clean API design with JSON responses
+- **Component-based** - Reusable React components
+- **Separation of Concerns** - Backend API and frontend are decoupled
 
 ---
 
 ## 📁 Project Structure
 
 ```
-Placement-Assistance-Copilot/
-├── agents/              # AI agents
-│   ├── readiness_agent.py
-│   ├── role_agent.py
-│   ├── feedback_agent.py
-│   └── action_agent.py
-├── rules/              # Business rules
-│   ├── scoring_rules.py
-│   └── role_requirements.py
-├── lovable-ui/         # React frontend
+placement-assistance-copilot/
+├── agents/                  # AI agents
+│   ├── readiness_agent.py   # Readiness evaluation agent
+│   ├── role_agent.py        # Role recommendation agent
+│   ├── feedback_agent.py    # Feedback analysis agent
+│   └── action_agent.py      # Action planning agent
+├── rules/                   # Business rules
+│   ├── scoring_rules.py     # Skill weights and scoring rules
+│   └── role_requirements.py # Role-specific requirements
+├── lovable-ui/              # React frontend
 │   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── utils/
+│   │   ├── components/      # React components
+│   │   ├── pages/           # Page components
+│   │   ├── utils/           # Utilities (API client)
+│   │   └── types/           # TypeScript types
 │   └── package.json
-├── templates/          # Legacy HTML templates
-├── static/            # Static assets
-├── app.py             # Flask application
-└── requirements.txt   # Python dependencies
+├── app.py                   # Flask API application
+└── requirements.txt         # Python dependencies
 ```
 
 ---
 
 ## 🎯 Usage Example
 
-1. **Enter Skill Scores** (0-100 for each skill)
-2. **Add Interview Feedback** (text description)
-3. **Click "Evaluate"**
-4. **View Results:**
-   - Readiness score and status
-   - Recommended/Not recommended roles
-   - **Detailed gap analysis** (NEW!)
-   - 7-day preparation plan
-   - Action items with roadmaps
+1. **Start the Backend**
+   ```bash
+   python app.py
+   ```
+
+2. **Start the Frontend**
+   ```bash
+   cd lovable-ui
+   npm run dev
+   ```
+
+3. **Use the Application**
+   - Enter skill scores (0-100 for each skill)
+   - Add interview feedback (text description)
+   - Click "Evaluate"
+   - View comprehensive results:
+     - Readiness score and status
+     - Recommended/Not recommended roles
+     - Detailed gap analysis
+     - Interactive 7-day preparation plan
+     - Action items with roadmaps
 
 ---
 
-## 🆕 What's New
+## 🔄 Recent Updates
 
-### Latest Features
+### Latest Changes
+- ✅ **API-Only Backend** - Converted to pure REST API with JSON responses only
+- ✅ **CORS Support** - Enabled cross-origin requests for frontend integration
+- ✅ **Clean Architecture** - Removed template rendering, focused on API endpoints
+- ✅ **Better Documentation** - Comprehensive API documentation
 - ✅ **Detailed Gap Analysis** - See exactly why candidates don't qualify for roles
 - ✅ **Interactive 7-Day Plans** - Click any day for comprehensive roadmaps
 - ✅ **Action Item Roadmaps** - Step-by-step guides for each action
 - ✅ **Professional UI** - Modern design with smooth animations
-- ✅ **Enhanced Mock Interview Guide** - Complete preparation roadmap
-
----
-
-## 📸 Screenshots
-
-*Add screenshots of your application here*
 
 ---
 
@@ -319,7 +429,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 **Bhupendra Singh**
 
 - GitHub: [@Bhupendra-DS](https://github.com/Bhupendra-DS)
-- Project: [Placement Assistance Copilot](https://github.com/Bhupendra-DS/Placement-Assistance-Copilot)
+- Repository: [placement-assistance-copilot](https://github.com/Bhupendra-DS/placement-assistance-copilot)
 
 ---
 
@@ -328,12 +438,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Built with modern web technologies
 - Inspired by the need for transparent, explainable AI in placement decisions
 - Designed for both placement teams and candidates
+- Uses rule-based logic for transparent, explainable decisions
 
 ---
 
 ## ⚠️ Disclaimer
 
-This system provides **decision support only** and does not replace human judgment. All final placement decisions remain with human evaluators.
+This system provides **decision support only** and does not replace human judgment. All final placement decisions remain with human evaluators. The system uses rule-based logic for transparency and explainability.
 
 ---
 
@@ -342,5 +453,7 @@ This system provides **decision support only** and does not replace human judgme
 **⭐ If you find this project helpful, please give it a star! ⭐**
 
 Made with ❤️ by [Bhupendra Singh](https://github.com/Bhupendra-DS)
+
+[⬆ Back to Top](#-placement-assistance-copilot)
 
 </div>
